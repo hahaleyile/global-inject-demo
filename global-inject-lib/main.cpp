@@ -17,10 +17,21 @@ BOOL APIENTRY DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 		break;
 
 	case DLL_THREAD_ATTACH:
+		break;
 	case DLL_THREAD_DETACH:
+		if (logSlot)
+		{
+			CloseHandle(logSlot);
+			logSlot = NULL;
+		}
 		break;
 
 	case DLL_PROCESS_DETACH:
+		if (logSlot)
+		{
+			CloseHandle(logSlot);
+			logSlot = NULL;
+		}
 		break;
 	}
 
@@ -73,3 +84,4 @@ BOOL GlobalHookSessionEnd(HANDLE hSession)
 
 	return TRUE;
 }
+

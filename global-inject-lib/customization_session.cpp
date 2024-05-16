@@ -8,28 +8,137 @@ extern HINSTANCE g_hDllInst;
 namespace
 {
 	typedef int (WINAPI* MESSAGEBOXW)(HWND, LPCWSTR, LPCWSTR, UINT);
+	typedef int (WINAPI* MESSAGEBOXA)(HWND, LPCSTR, LPCSTR, UINT);
+	typedef BOOL(WINAPI* GETUSERNAMEA)(LPSTR, LPDWORD);
+	typedef BOOL(WINAPI* GETCOMPUTERNAMEA)(LPSTR, LPDWORD);
+	typedef BOOL(WINAPI* GETCOMPUTERNAMEW)(LPWSTR, LPDWORD);
 
 	MESSAGEBOXW pOriginalMessageBoxW;
+	MESSAGEBOXA pOriginalMessageBoxA;
+	GETUSERNAMEA pOriginalGetUserNameA;
+	GETCOMPUTERNAMEA pOriginalGetComputerNameA;
+	GETCOMPUTERNAMEW pOriginalGetComputerNameW;
 
 	int WINAPI MessageBoxWHook(HWND hWnd, LPCWSTR lpText, LPCWSTR lpCaption, UINT uType)
 	{
-		static int counter = 0;
-		counter++;
+		int res = pOriginalMessageBoxW(hWnd, lpText, lpCaption, uType);
 
-		WCHAR newText[1025];
-		wsprintf(newText, L"Global injection and hooking demo!\n\n%s", lpText);
+		WCHAR log[212];
+		wsprintfW(log, L"MessageBoxW -- In -- lpCaption: %s @@ uType: %u @@ return: %d\n", lpCaption, uType, res);
+		log[211] = 0;
+		PRINT(log);
 
-		WCHAR newTitle[1025];
-		wsprintf(newTitle, L"[%d] %s", counter, lpCaption);
+		return res;
+	}
 
-		return pOriginalMessageBoxW(hWnd, newText, newTitle, uType);
+	int WINAPI MessageBoxAHook(HWND hWnd, LPCSTR lpText, LPCSTR lpCaption, UINT uType)
+	{
+		int res = pOriginalMessageBoxA(hWnd, lpText, lpCaption, uType);
+
+		WCHAR log[212];
+		wsprintfW(log, L"MessageBoxA -- In -- lpCaption: %hs @@ uType: %u @@ return: %d\n", lpCaption, uType, res);
+		log[211] = 0;
+		PRINT(log);
+
+		return res;
+	}
+
+	BOOL WINAPI GetUserNameAHook(LPSTR lpBuffer, LPDWORD pcbBuffer)
+	{
+		BOOL res = pOriginalGetUserNameA(lpBuffer, pcbBuffer);
+
+		WCHAR log[212];
+		wsprintfW(log, L"GetUserNameA -- @@ Out -- lpBuffer: %hs @@ pcbBuffer: %u @@ return: %d\n", lpBuffer, *pcbBuffer, res);
+		log[211] = 0;
+		PRINT(log);
+
+		return res;
+	}
+
+	BOOL WINAPI GetComputerNameAHook(LPSTR lpBuffer, LPDWORD nSize)
+	{
+		DWORD originalSize = *nSize;
+		BOOL res = pOriginalGetComputerNameA(lpBuffer, nSize);
+
+		WCHAR log[212];
+		wsprintfW(log, L"GetComputerNameA -- In -- nSize: %u @@ Out -- lpBuffer: %hs @@ nSize: %u @@ return: %d\n", originalSize, lpBuffer, *nSize, res);
+		log[211] = 0;
+		PRINT(log);
+
+		return res;
+	}
+
+	BOOL WINAPI GetComputerNameWHook(LPWSTR lpBuffer, LPDWORD nSize)
+	{
+		DWORD originalSize = *nSize;
+		BOOL res = pOriginalGetComputerNameW(lpBuffer, nSize);
+
+		WCHAR log[212];
+		wsprintfW(log, L"GetComputerNameW -- In -- nSize: %u @@ Out -- lpBuffer: %s @@ nSize: %u @@ return: %d\n", originalSize, lpBuffer, *nSize, res);
+		log[211] = 0;
+		PRINT(log);
+
+		return res;
 	}
 
 	MH_STATUS InitCustomizationHooks()
 	{
-		MH_STATUS status = MH_CreateHook(MessageBoxW, (void*)MessageBoxWHook, (void**)&pOriginalMessageBoxW);
+		MH_STATUS status;
+		WCHAR reason[212];
+
+		status = MH_CreateHook(MessageBoxW, MessageBoxWHook, (void**)&pOriginalMessageBoxW);
 		if (status == MH_OK) {
 			status = MH_QueueEnableHook(MessageBoxW);
+			PRINT(L"MessageBoxW Hooked\n");
+		}
+		else
+		{
+			wsprintfW(reason, L"MessageBoxW: %d\npid: %d\n", status, _getpid());
+			PRINT(reason);
+		}
+
+		status = MH_CreateHook(MessageBoxA, MessageBoxAHook, (void**)&pOriginalMessageBoxA);
+		if (status == MH_OK) {
+			status = MH_QueueEnableHook(MessageBoxA);
+			PRINT(L"MessageBoxA Hooked\n");
+		}
+		else
+		{
+			wsprintfW(reason, L"MessageBoxA: %d\npid: %d\n", status, _getpid());
+			PRINT(reason);
+		}
+
+		status = MH_CreateHook(GetUserNameA, GetUserNameAHook, (void**)&pOriginalGetUserNameA);
+		if (status == MH_OK) {
+			status = MH_QueueEnableHook(GetUserNameA);
+			PRINT(L"GetUserNameA Hooked\n");
+		}
+		else
+		{
+			wsprintfW(reason, L"GetUserNameA: %d\npid: %d\n", status, _getpid());
+			PRINT(reason);
+		}
+
+		status = MH_CreateHook(GetComputerNameA, GetComputerNameAHook, (void**)&pOriginalGetComputerNameA);
+		if (status == MH_OK) {
+			status = MH_QueueEnableHook(GetComputerNameA);
+			PRINT(L"GetComputerNameA Hooked\n");
+		}
+		else
+		{
+			wsprintfW(reason, L"GetComputerNameA: %d\npid: %d\n", status, _getpid());
+			PRINT(reason);
+		}
+
+		status = MH_CreateHook(GetComputerNameW, GetComputerNameWHook, (void**)&pOriginalGetComputerNameW);
+		if (status == MH_OK) {
+			status = MH_QueueEnableHook(GetComputerNameW);
+			PRINT(L"GetComputerNameW Hooked\n");
+		}
+		else
+		{
+			wsprintfW(reason, L"GetComputerNameW: %d\npid: %d\n", status, _getpid());
+			PRINT(reason);
 		}
 
 		return status;

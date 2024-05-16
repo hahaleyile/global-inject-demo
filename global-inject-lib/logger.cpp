@@ -1,6 +1,9 @@
 #include "stdafx.h"
 #include "logger.h"
 
+HANDLE logSlot = NULL;
+LPCTSTR slotName = TEXT("\\\\.\\mailslot\\{58EAAA50-B423-4AE6-8D4D-577380847A7F}");
+
 namespace Logger
 {
 	void VLogLine(PCWSTR format, va_list args)
@@ -30,5 +33,46 @@ namespace Logger
 		va_start(args, format);
 		VLogLine(format, args);
 		va_end(args);
+	}
+
+	void LogMailSlot(LPCWSTR lpszMessage)
+	{
+		if (!logSlot)
+		{
+			HANDLE hFile = CreateFile(slotName,
+				GENERIC_WRITE,
+				FILE_SHARE_READ,
+				(LPSECURITY_ATTRIBUTES)NULL,
+				OPEN_EXISTING,
+				FILE_ATTRIBUTE_NORMAL,
+				(HANDLE)NULL);
+
+			if (hFile == INVALID_HANDLE_VALUE)
+			{
+				LOG("CreateFile failed with %d.\n", GetLastError());
+				return;
+			}
+			else
+			{
+				logSlot = hFile;
+			}
+		}
+
+		BOOL fResult;
+		DWORD cbWritten;
+
+		fResult = WriteFile(logSlot,
+			lpszMessage,
+			(DWORD)(lstrlenW(lpszMessage) + 1) * sizeof(WCHAR),
+			&cbWritten,
+			(LPOVERLAPPED)NULL);
+
+		if (!fResult)
+		{
+			LOG("WriteFile failed with %d.\n", GetLastError());
+			return;
+		}
+
+		LOG("Slot written to successfully.\n");
 	}
 }
