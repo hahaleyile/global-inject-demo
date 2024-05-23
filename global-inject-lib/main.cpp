@@ -2,6 +2,7 @@
 #include "all_processes_injector.h"
 #include "customization_session.h"
 #include "logger.h"
+#include <WinSock2.h>
 
 HINSTANCE g_hDllInst;
 
@@ -19,19 +20,12 @@ BOOL APIENTRY DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 	case DLL_THREAD_ATTACH:
 		break;
 	case DLL_THREAD_DETACH:
-		if (logSlot)
-		{
-			CloseHandle(logSlot);
-			logSlot = NULL;
-		}
 		break;
 
 	case DLL_PROCESS_DETACH:
-		if (logSlot)
-		{
-			CloseHandle(logSlot);
-			logSlot = NULL;
-		}
+		zmq_close(zmqPusher);
+		// Will block if server is not running
+		//zmq_ctx_destroy(zmqContext);
 		break;
 	}
 

@@ -19,14 +19,15 @@ namespace
 	GETCOMPUTERNAMEA pOriginalGetComputerNameA;
 	GETCOMPUTERNAMEW pOriginalGetComputerNameW;
 
+	// define a buffer for logging, 64K words
+	WCHAR logBuffer[64 * 1024];
+
 	int WINAPI MessageBoxWHook(HWND hWnd, LPCWSTR lpText, LPCWSTR lpCaption, UINT uType)
 	{
 		int res = pOriginalMessageBoxW(hWnd, lpText, lpCaption, uType);
 
-		WCHAR log[212];
-		wsprintfW(log, L"MessageBoxW -- In -- lpCaption: %s @@ uType: %u @@ return: %d\n", lpCaption, uType, res);
-		log[211] = 0;
-		PRINT(log);
+		if (StringCbPrintfW(logBuffer, sizeof(logBuffer), L"MessageBoxW -- In -- lpText: %ls @@ lpCaption: %ls @@ uType: %u @@ return: %d\n", lpText, lpCaption, uType, res) == S_OK)
+			PRINT(logBuffer);
 
 		return res;
 	}
@@ -35,10 +36,8 @@ namespace
 	{
 		int res = pOriginalMessageBoxA(hWnd, lpText, lpCaption, uType);
 
-		WCHAR log[212];
-		wsprintfW(log, L"MessageBoxA -- In -- lpCaption: %hs @@ uType: %u @@ return: %d\n", lpCaption, uType, res);
-		log[211] = 0;
-		PRINT(log);
+		if (StringCbPrintfW(logBuffer, sizeof(logBuffer), L"MessageBoxA -- In -- lpText: %hs @@ lpCaption: %hs @@ uType: %u @@ return: %d\n", lpText, lpCaption, uType, res) == S_OK)
+			PRINT(logBuffer);
 
 		return res;
 	}
@@ -47,10 +46,8 @@ namespace
 	{
 		BOOL res = pOriginalGetUserNameA(lpBuffer, pcbBuffer);
 
-		WCHAR log[212];
-		wsprintfW(log, L"GetUserNameA -- @@ Out -- lpBuffer: %hs @@ pcbBuffer: %u @@ return: %d\n", lpBuffer, *pcbBuffer, res);
-		log[211] = 0;
-		PRINT(log);
+		if (StringCbPrintfW(logBuffer, sizeof(logBuffer), L"GetUserNameA -- @@ Out -- lpBuffer: %hs @@ pcbBuffer: %u @@ return: %d\n", lpBuffer, *pcbBuffer, res) == S_OK)
+			PRINT(logBuffer);
 
 		return res;
 	}
@@ -60,10 +57,8 @@ namespace
 		DWORD originalSize = *nSize;
 		BOOL res = pOriginalGetComputerNameA(lpBuffer, nSize);
 
-		WCHAR log[212];
-		wsprintfW(log, L"GetComputerNameA -- In -- nSize: %u @@ Out -- lpBuffer: %hs @@ nSize: %u @@ return: %d\n", originalSize, lpBuffer, *nSize, res);
-		log[211] = 0;
-		PRINT(log);
+		if (StringCbPrintfW(logBuffer, sizeof(logBuffer), L"GetComputerNameA -- In -- nSize: %u @@ Out -- lpBuffer: %hs @@ nSize: %u @@ return: %d\n", originalSize, lpBuffer, *nSize, res) == S_OK)
+			PRINT(logBuffer);
 
 		return res;
 	}
@@ -73,10 +68,8 @@ namespace
 		DWORD originalSize = *nSize;
 		BOOL res = pOriginalGetComputerNameW(lpBuffer, nSize);
 
-		WCHAR log[212];
-		wsprintfW(log, L"GetComputerNameW -- In -- nSize: %u @@ Out -- lpBuffer: %s @@ nSize: %u @@ return: %d\n", originalSize, lpBuffer, *nSize, res);
-		log[211] = 0;
-		PRINT(log);
+		if (StringCbPrintfW(logBuffer, sizeof(logBuffer), L"GetComputerNameW -- In -- nSize: %u @@ Out -- lpBuffer: %s @@ nSize: %u @@ return: %d\n", originalSize, lpBuffer, *nSize, res) == S_OK)
+			PRINT(logBuffer);
 
 		return res;
 	}

@@ -1,8 +1,8 @@
 #include "stdafx.h"
 #include "logger.h"
 
-HANDLE logSlot = NULL;
-LPCTSTR slotName = TEXT("\\\\.\\mailslot\\{58EAAA50-B423-4AE6-8D4D-577380847A7F}");
+void* zmqPusher = NULL;
+void* zmqContext = NULL;
 
 namespace Logger
 {
@@ -35,44 +35,20 @@ namespace Logger
 		va_end(args);
 	}
 
-	void LogMailSlot(LPCWSTR lpszMessage)
+	void LogZeroMQ(LPCWSTR lpszMessage)
 	{
-		if (!logSlot)
+		if (!zmqContext)
 		{
-			HANDLE hFile = CreateFile(slotName,
-				GENERIC_WRITE,
-				FILE_SHARE_READ,
-				(LPSECURITY_ATTRIBUTES)NULL,
-				OPEN_EXISTING,
-				FILE_ATTRIBUTE_NORMAL,
-				(HANDLE)NULL);
-
-			if (hFile == INVALID_HANDLE_VALUE)
-			{
-				LOG("CreateFile failed with %d.\n", GetLastError());
-				return;
-			}
-			else
-			{
-				logSlot = hFile;
-			}
+			zmqContext = zmq_ctx_new();
+			zmqPusher = zmq_socket(zmqContext, ZMQ_PUSH);
+			zmq_connect(zmqPusher, "tcp://127.0.0.1:54124");
 		}
 
-		BOOL fResult;
-		DWORD cbWritten;
-
-		fResult = WriteFile(logSlot,
-			lpszMessage,
-			(DWORD)(lstrlenW(lpszMessage) + 1) * sizeof(WCHAR),
-			&cbWritten,
-			(LPOVERLAPPED)NULL);
-
-		if (!fResult)
-		{
-			LOG("WriteFile failed with %d.\n", GetLastError());
-			return;
-		}
-
-		LOG("Slot written to successfully.\n");
+		zmq_msg_t request;
+		int size = wcslen(lpszMessage) * sizeof(WCHAR);
+		zmq_msg_init_size(&request, size);
+		memcpy(zmq_msg_data(&request), lpszMessage, size);
+		zmq_msg_send(&request, zmqPusher, ZMQ_NOBLOCK);
+		zmq_msg_close(&request);
 	}
 }

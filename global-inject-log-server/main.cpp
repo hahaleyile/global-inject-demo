@@ -1,111 +1,41 @@
-#include <Windows.h>
-#include <tchar.h>
 #include <stdio.h>
-#include <strsafe.h>
+#include <zmq.h>
+#include <Windows.h>
 
-HANDLE hSlot, hLog;
-LPCTSTR SlotName = TEXT("\\\\.\\mailslot\\{58EAAA50-B423-4AE6-8D4D-577380847A7F}");
+HANDLE hLog;
+void* context, * server;
 
-BOOL ReadSlot()
+void zmqRecv()
 {
-	DWORD cbMessage, cMessage, cbRead, cbWrite;
-	BOOL fResult;
-	LPWSTR lpszBuffer;
-	DWORD cAllMessages;
-	HANDLE hEvent;
-	OVERLAPPED ov;
+	zmq_msg_t msg;
+	DWORD cbWrite;
 
-	cbMessage = cMessage = cbRead = cbWrite = 0;
-
-	hEvent = CreateEvent(NULL, FALSE, FALSE, TEXT("MonitorSlot"));
-	if (NULL == hEvent)
-		return FALSE;
-	ov.Offset = 0;
-	ov.OffsetHigh = 0;
-	ov.hEvent = hEvent;
-
-	fResult = GetMailslotInfo(hSlot, // mailslot handle 
-		(LPDWORD)NULL,               // no maximum message size 
-		&cbMessage,                   // size of next message 
-		&cMessage,                    // number of messages 
-		(LPDWORD)NULL);              // no read time-out 
-
-	if (!fResult)
+	do
 	{
-		printf("GetMailslotInfo failed with %d.\n", GetLastError());
-		return FALSE;
-	}
-
-	// no new messages arrived
-	if (cbMessage == MAILSLOT_NO_MESSAGE)
-	{
-		printf("Waiting for a message...\n");
-		return TRUE;
-	}
-
-	cAllMessages = cMessage;
-
-	while (cMessage != 0)  // retrieve all messages
-	{
-		// Allocate memory for the message. 
-
-		lpszBuffer = (LPWSTR)GlobalAlloc(GPTR, cbMessage);
-		if (NULL == lpszBuffer)
-			return FALSE;
-		lpszBuffer[0] = '\0';
-
-		fResult = ReadFile(hSlot,
-			lpszBuffer,
-			cbMessage,
-			&cbRead,
-			&ov);
-
-		if (!fResult)
+		zmq_msg_init(&msg);
+		int size = zmq_msg_recv(&msg, server, 0);
+		if (size == -1)
 		{
-			printf("ReadFile failed with %d.\n", GetLastError());
-			GlobalFree((HGLOBAL)lpszBuffer);
-			return FALSE;
+			printf("zmq_msg_recv failed with %d.\n", zmq_errno());
+			return;
 		}
-
-		// Display the message. 
-
-		if (!WriteFile(hLog, lpszBuffer, cbRead - 2, &cbWrite, NULL))
+		wchar_t* buffer = (wchar_t*)zmq_msg_data(&msg);
+		size = zmq_msg_size(&msg);
+		if (!WriteFile(hLog,buffer,size,&cbWrite,NULL))
 		{
 			printf("WriteFile failed with %d.\n", GetLastError());
 		}
-
-		GlobalFree((HGLOBAL)lpszBuffer);
-
-		fResult = GetMailslotInfo(hSlot,  // mailslot handle 
-			(LPDWORD)NULL,               // no maximum message size 
-			&cbMessage,                   // size of next message 
-			&cMessage,                    // number of messages 
-			(LPDWORD)NULL);              // no read time-out 
-
-		if (!fResult)
-		{
-			printf("GetMailslotInfo failed (%d)\n", GetLastError());
-			return FALSE;
-		}
-	}
-	CloseHandle(hEvent);
-	return TRUE;
+		zmq_msg_close(&msg);
+	} while (true);
 }
 
-BOOL WINAPI MakeSlot(LPCTSTR lpszSlotName)
+void zmqInit()
 {
-	hSlot = CreateMailslot(lpszSlotName,
-		0,                             // no maximum message size 
-		MAILSLOT_WAIT_FOREVER,         // no time-out for operations 
-		(LPSECURITY_ATTRIBUTES)NULL); // default security
-
-	if (hSlot == INVALID_HANDLE_VALUE)
-	{
-		printf("CreateMailslot failed with %d\n", GetLastError());
-		return FALSE;
-	}
-	else printf("Mailslot created successfully.\n");
-	return TRUE;
+	context = zmq_ctx_new();
+	server = zmq_socket(context, ZMQ_PULL);
+	int rc = zmq_bind(server, "tcp://127.0.0.1:54124");
+	if (rc != 0)
+		exit(1);
 }
 
 int main()
@@ -124,11 +54,11 @@ int main()
 		return 1;
 	}
 
-	MakeSlot(SlotName);
-	while (TRUE)
-	{
-		ReadSlot();
-		Sleep(3000);
-	}
+	zmqInit();
+	zmqRecv();
+
+	CloseHandle(hLog);
+	zmq_close(server);
+	zmq_ctx_destroy(context);
 	return 0;
 }
