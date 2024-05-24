@@ -24,9 +24,11 @@ namespace
 
 	int WINAPI MessageBoxWHook(HWND hWnd, LPCWSTR lpText, LPCWSTR lpCaption, UINT uType)
 	{
+		SYSTEMTIME lt;
+		GetLocalTime(&lt);
 		int res = pOriginalMessageBoxW(hWnd, lpText, lpCaption, uType);
 
-		if (StringCbPrintfW(logBuffer, sizeof(logBuffer), L"MessageBoxW -- In -- lpText: %ls @@ lpCaption: %ls @@ uType: %u @@ return: %d\n", lpText, lpCaption, uType, res) == S_OK)
+		if (StringCbPrintfW(logBuffer, sizeof(logBuffer), L"%d@@MessageBoxW@@%d@@%02d:%02d:%02d.%07d@@in@@lpText:%ls@@lpCaption:%ls@@uType:%u", _getpid(), res, lt.wHour, lt.wMinute, lt.wSecond, lt.wMilliseconds, lpText, lpCaption, uType) == S_OK)
 			PRINT(logBuffer);
 
 		return res;
@@ -82,7 +84,6 @@ namespace
 		status = MH_CreateHook(MessageBoxW, MessageBoxWHook, (void**)&pOriginalMessageBoxW);
 		if (status == MH_OK) {
 			status = MH_QueueEnableHook(MessageBoxW);
-			PRINT(L"MessageBoxW Hooked\n");
 		}
 		else
 		{
@@ -93,7 +94,6 @@ namespace
 		status = MH_CreateHook(MessageBoxA, MessageBoxAHook, (void**)&pOriginalMessageBoxA);
 		if (status == MH_OK) {
 			status = MH_QueueEnableHook(MessageBoxA);
-			PRINT(L"MessageBoxA Hooked\n");
 		}
 		else
 		{
@@ -101,38 +101,35 @@ namespace
 			PRINT(reason);
 		}
 
-		status = MH_CreateHook(GetUserNameA, GetUserNameAHook, (void**)&pOriginalGetUserNameA);
-		if (status == MH_OK) {
-			status = MH_QueueEnableHook(GetUserNameA);
-			PRINT(L"GetUserNameA Hooked\n");
-		}
-		else
-		{
-			wsprintfW(reason, L"GetUserNameA: %d\npid: %d\n", status, _getpid());
-			PRINT(reason);
-		}
+		//status = MH_CreateHook(GetUserNameA, GetUserNameAHook, (void**)&pOriginalGetUserNameA);
+		//if (status == MH_OK) {
+		//	status = MH_QueueEnableHook(GetUserNameA);
+		//}
+		//else
+		//{
+		//	wsprintfW(reason, L"GetUserNameA: %d\npid: %d\n", status, _getpid());
+		//	PRINT(reason);
+		//}
 
-		status = MH_CreateHook(GetComputerNameA, GetComputerNameAHook, (void**)&pOriginalGetComputerNameA);
-		if (status == MH_OK) {
-			status = MH_QueueEnableHook(GetComputerNameA);
-			PRINT(L"GetComputerNameA Hooked\n");
-		}
-		else
-		{
-			wsprintfW(reason, L"GetComputerNameA: %d\npid: %d\n", status, _getpid());
-			PRINT(reason);
-		}
+		//status = MH_CreateHook(GetComputerNameA, GetComputerNameAHook, (void**)&pOriginalGetComputerNameA);
+		//if (status == MH_OK) {
+		//	status = MH_QueueEnableHook(GetComputerNameA);
+		//}
+		//else
+		//{
+		//	wsprintfW(reason, L"GetComputerNameA: %d\npid: %d\n", status, _getpid());
+		//	PRINT(reason);
+		//}
 
-		status = MH_CreateHook(GetComputerNameW, GetComputerNameWHook, (void**)&pOriginalGetComputerNameW);
-		if (status == MH_OK) {
-			status = MH_QueueEnableHook(GetComputerNameW);
-			PRINT(L"GetComputerNameW Hooked\n");
-		}
-		else
-		{
-			wsprintfW(reason, L"GetComputerNameW: %d\npid: %d\n", status, _getpid());
-			PRINT(reason);
-		}
+		//status = MH_CreateHook(GetComputerNameW, GetComputerNameWHook, (void**)&pOriginalGetComputerNameW);
+		//if (status == MH_OK) {
+		//	status = MH_QueueEnableHook(GetComputerNameW);
+		//}
+		//else
+		//{
+		//	wsprintfW(reason, L"GetComputerNameW: %d\npid: %d\n", status, _getpid());
+		//	PRINT(reason);
+		//}
 
 		return status;
 	}

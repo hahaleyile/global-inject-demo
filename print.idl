@@ -1,0 +1,8 @@
+[
+	uuid(ebdcafb3-96aa-4c04-9bba-451c29ec14f4),
+	version(1.0)
+]
+interface print
+{
+	void PrintFile([in] handle_t hBinding, [in, string] wchar_t* content);
+}

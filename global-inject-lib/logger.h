@@ -1,15 +1,16 @@
 #pragma once
-#include <zmq.h>
+#include <queue>
 
-extern void* zmqPusher, * zmqContext;
+extern handle_t g_hBinding;
+extern RPC_CSTR pszStringBinding;
 
 namespace Logger
 {
 	void VLogLine(PCWSTR format, va_list args);
 	void LogLine(PCWSTR format, ...);
-	void LogZeroMQ(LPCWSTR lpszMessage);
 }
+void LogRPC(PWSTR lpszMessage);
 
-#define PRINT(message)		  Logger::LogZeroMQ((message))
+#define PRINT(message)		  LogRPC((message))
 #define LOG(message, ...)     Logger::LogLine(L"[GLOBAL-INJECT-LOG]     [%S]: " message L"\n", __FUNCTION__, __VA_ARGS__)
 #define VERBOSE(message, ...) Logger::LogLine(L"[GLOBAL-INJECT-VERBOSE] [%S]: " message L"\n", __FUNCTION__, __VA_ARGS__)

@@ -8,7 +8,7 @@ HINSTANCE g_hDllInst;
 
 BOOL APIENTRY DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 {
-	switch(fdwReason) {
+	switch (fdwReason) {
 	case DLL_PROCESS_ATTACH:
 		g_hDllInst = hinstDLL;
 
@@ -23,9 +23,10 @@ BOOL APIENTRY DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 		break;
 
 	case DLL_PROCESS_DETACH:
-		zmq_close(zmqPusher);
-		// Will block if server is not running
-		//zmq_ctx_destroy(zmqContext);
+		if (pszStringBinding)
+			RpcStringFreeA(&pszStringBinding);
+		if (g_hBinding)
+			RpcBindingFree(&g_hBinding);
 		break;
 	}
 

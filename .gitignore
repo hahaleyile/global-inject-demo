@@ -261,3 +261,5 @@ __pycache__/
 *.pyc
 /vcpkg_installed
 /vcpkg-configuration.json
+
+/print.h
